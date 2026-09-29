@@ -1,150 +1,125 @@
 import { Difficulty, SudokuBoard } from '../types/sudoku';
 
-// Curated verified authentic Sudoku master seeds with guaranteed unique solutions
-interface PuzzleSeed {
-  clues: string; // 81 chars, '0' or '.' for empty
-  solution: string; // 81 chars of digits 1-9
+// Check if placing val at (r, c) is valid according to Sudoku rules
+function isValid(grid: number[][], r: number, c: number, val: number): boolean {
+  for (let i = 0; i < 9; i++) {
+    if (grid[r][i] === val) return false;
+    if (grid[i][c] === val) return false;
+  }
+  const br = Math.floor(r / 3) * 3;
+  const bc = Math.floor(c / 3) * 3;
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      if (grid[br + i][bc + j] === val) return false;
+    }
+  }
+  return true;
 }
 
-const EASY_SEEDS: PuzzleSeed[] = [
-  {
-    clues: '000260701680070090190004500820100040004602900050003028009300074040050036703018000',
-    solution: '435269781682571493197834562826195347374682915951743628519326874248957136763418259'
-  },
-  {
-    clues: '100489006730000040000001295007120600500703008006095700914600000020000037800512004',
-    solution: '125489376739256841468371295387124659591763428246895713914637582625948137873512964'
-  },
-  {
-    clues: '020608000580009700000040000370000500600000004008000013000020000009800036000306090',
-    solution: '123678945584239761967145823372914586691583274458762319746521398219857436835496152'
-  },
-  {
-    clues: '000000012000000003002300400001800005060070800000009000008500000900040500470006000',
-    solution: '654783912897621453132354487721835645365472891489169726218597364976248531473916258'
+// Backtracking solver with randomized candidate selection
+function solveRandom(grid: number[][]): boolean {
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      if (grid[r][c] === 0) {
+        const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9].sort(() => Math.random() - 0.5);
+        for (const n of nums) {
+          if (isValid(grid, r, c, n)) {
+            grid[r][c] = n;
+            if (solveRandom(grid)) return true;
+            grid[r][c] = 0;
+          }
+        }
+        return false;
+      }
+    }
   }
-];
+  return true;
+}
 
-const MEDIUM_SEEDS: PuzzleSeed[] = [
-  {
-    clues: '000600400700003600000091080000000000050180003000306045040200060903000000020000100',
-    solution: '581672439792843651364591287438925716256187943179316845847239561913458270625764198'
-  },
-  {
-    clues: '000000075000000009023004000790000000004060200000000053000100490800000000450000000',
-    solution: '648293175175846329923514867791435682534968217286721953362178490817359246459682731'
-  },
-  {
-    clues: '200000060000075030048090100000302000300801005000409000001080250080950000070000004',
-    solution: '235148769196275438748693125814362597369821475527459813951784256482956317673512984'
-  },
-  {
-    clues: '000003017015009080060000000100007000009000200000500004000000020050200340030100000',
-    solution: '492853617315679482768421953146937825589142276273586194981765423657298341234149568'
+// Count number of solutions (stops early at 2 to verify uniqueness)
+function countSolutions(grid: number[][], counter = { val: 0 }): number {
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      if (grid[r][c] === 0) {
+        for (let n = 1; n <= 9; n++) {
+          if (isValid(grid, r, c, n)) {
+            grid[r][c] = n;
+            countSolutions(grid, counter);
+            grid[r][c] = 0;
+            if (counter.val >= 2) return counter.val;
+          }
+        }
+        return counter.val;
+      }
+    }
   }
-];
+  counter.val++;
+  return counter.val;
+}
 
-const HARD_SEEDS: PuzzleSeed[] = [
-  {
-    clues: '000000010400000000020000000000050407008000300001090000300400200050100000000806000',
-    solution: '693784512487512936521639874932158467178265349541397285316478295854123769729856138'
-  },
-  {
-    clues: '000700000100000000000430200000000006000509000000000418000081000002000050040000300',
-    solution: '264715893137928645895436271423857169671549328589263418356981754912374852748652319'
-  },
-  {
-    clues: '000000000000003085001020000000507000004000100090000000500000073002010000000040009',
-    solution: '987654321623193485451827936238547619764289153195361748519438273342715896876942539'
-  },
-  {
-    clues: '700000000000000000000000000000000000000000000000000000000000000000000000000000000',
-    solution: '712345689435689127896172345123456798547891236689237451251763894374918562968524713'
-  }
-];
-
-// Fallback seed if needed
-const DEFAULT_SEED: PuzzleSeed = {
-  clues: '020608000580009700000040000370000500600000004008000013000020000009800036000306090',
-  solution: '123678945584239761967145823372914586691583274458762319746521398219857436835496152'
-};
-
-// Apply mathematical isomorphism transformations to generate over 1 trillion unique boards
+// Generate a 100% mathematically valid, uniquely solvable Sudoku puzzle
 export function generateSudokuPuzzle(difficulty: Difficulty): {
   initialBoard: SudokuBoard;
   solution: number[][];
 } {
-  const seedList = difficulty === 'easy' ? EASY_SEEDS : difficulty === 'medium' ? MEDIUM_SEEDS : HARD_SEEDS;
-  const pickedSeed = seedList[Math.floor(Math.random() * seedList.length)] || DEFAULT_SEED;
+  const grid: number[][] = Array.from({ length: 9 }, () => Array(9).fill(0));
 
-  // Convert 81-char string to 9x9 matrix
-  const basePuzzle: number[][] = [];
-  const baseSolution: number[][] = [];
+  // 1. Fill the three diagonally independent 3x3 blocks (top-left, center, bottom-right)
+  // Since they are diagonally disjoint, their numbers never conflict
+  for (let k = 0; k < 9; k += 3) {
+    const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9].sort(() => Math.random() - 0.5);
+    let idx = 0;
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 3; c++) {
+        grid[k + r][k + c] = nums[idx++];
+      }
+    }
+  }
 
+  // 2. Solve the rest of the board using backtracking
+  solveRandom(grid);
+
+  // Store the 100% verified full solution
+  const solution: number[][] = grid.map(row => [...row]);
+  const puzzle: number[][] = solution.map(row => [...row]);
+
+  // 3. Determine number of clues to keep based on difficulty
+  // Easy: ~42 clues (39 empty)
+  // Medium: ~34 clues (47 empty)
+  // Hard: ~28 clues (53 empty)
+  const cluesToKeep = difficulty === 'easy' ? 42 : difficulty === 'medium' ? 34 : 28;
+  const targetRemove = 81 - cluesToKeep;
+
+  const positions: [number, number][] = [];
   for (let r = 0; r < 9; r++) {
-    basePuzzle[r] = [];
-    baseSolution[r] = [];
     for (let c = 0; c < 9; c++) {
-      const idx = r * 9 + c;
-      const clueChar = pickedSeed.clues[idx];
-      const solChar = pickedSeed.solution[idx];
-      basePuzzle[r][c] = clueChar >= '1' && clueChar <= '9' ? Number(clueChar) : 0;
-      baseSolution[r][c] = Number(solChar) || 1;
+      positions.push([r, c]);
+    }
+  }
+  positions.sort(() => Math.random() - 0.5);
+
+  let removed = 0;
+  for (const [r, c] of positions) {
+    if (removed >= targetRemove) break;
+
+    const temp = puzzle[r][c];
+    puzzle[r][c] = 0;
+
+    // Verify the puzzle remains uniquely solvable
+    const copy = puzzle.map(row => [...row]);
+    const counter = { val: 0 };
+    countSolutions(copy, counter);
+
+    // If removing this clue causes ambiguity (multiple solutions), restore it
+    if (counter.val !== 1) {
+      puzzle[r][c] = temp;
+    } else {
+      removed++;
     }
   }
 
-  // 1. Random Number Permutation (shuffle digits 1-9)
-  const digits = [1, 2, 3, 4, 5, 6, 7, 8, 9].sort(() => Math.random() - 0.5);
-  const digitMap: Record<number, number> = { 0: 0 };
-  for (let i = 1; i <= 9; i++) {
-    digitMap[i] = digits[i - 1];
-  }
-
-  let puzzle = basePuzzle.map(row => row.map(val => digitMap[val]));
-  let solution = baseSolution.map(row => row.map(val => digitMap[val]));
-
-  // 2. Randomly swap rows within 3-row bands
-  for (let band = 0; band < 3; band++) {
-    if (Math.random() > 0.4) {
-      const r1 = band * 3 + Math.floor(Math.random() * 3);
-      const r2 = band * 3 + Math.floor(Math.random() * 3);
-      if (r1 !== r2) {
-        [puzzle[r1], puzzle[r2]] = [puzzle[r2], puzzle[r1]];
-        [solution[r1], solution[r2]] = [solution[r2], solution[r1]];
-      }
-    }
-  }
-
-  // 3. Randomly swap columns within 3-col stacks
-  for (let stack = 0; stack < 3; stack++) {
-    if (Math.random() > 0.4) {
-      const c1 = stack * 3 + Math.floor(Math.random() * 3);
-      const c2 = stack * 3 + Math.floor(Math.random() * 3);
-      if (c1 !== c2) {
-        for (let r = 0; r < 9; r++) {
-          [puzzle[r][c1], puzzle[r][c2]] = [puzzle[r][c2], puzzle[r][c1]];
-          [solution[r][c1], solution[r][c2]] = [solution[r][c2], solution[r][c1]];
-        }
-      }
-    }
-  }
-
-  // 4. Random reflection / transposition (50% chance)
-  if (Math.random() > 0.5) {
-    const tPuzzle: number[][] = Array.from({ length: 9 }, () => Array(9).fill(0));
-    const tSolution: number[][] = Array.from({ length: 9 }, () => Array(9).fill(0));
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 9; c++) {
-        tPuzzle[r][c] = puzzle[c][r];
-        tSolution[r][c] = solution[c][r];
-      }
-    }
-    puzzle = tPuzzle;
-    solution = tSolution;
-  }
-
-  // Build the rich SudokuBoard structure
-  const board: SudokuBoard = puzzle.map((row, r) =>
+  // 4. Construct rich SudokuBoard with guaranteed solution integrity
+  const initialBoard: SudokuBoard = puzzle.map((row, r) =>
     row.map((val, c) => ({
       row: r,
       col: c,
@@ -156,7 +131,7 @@ export function generateSudokuPuzzle(difficulty: Difficulty): {
     }))
   );
 
-  return { initialBoard: board, solution };
+  return { initialBoard, solution };
 }
 
 // Validate board for duplicate conflicts in row, col, or 3x3 box

@@ -23,7 +23,9 @@ import {
   CheckCircle2,
   SlidersHorizontal,
   Flame,
-  Zap
+  Zap,
+  Eye,
+  CheckCheck
 } from 'lucide-react';
 
 interface SudokuGameProps {
@@ -41,6 +43,7 @@ export const SudokuGame: React.FC<SudokuGameProps> = ({ externalLargeFont = fals
   const [timeElapsed, setTimeElapsed] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
+  const [showSolutionModal, setShowSolutionModal] = useState<boolean>(false);
 
   // Settings
   const [highlightDuplicates, setHighlightDuplicates] = useState<boolean>(true);
@@ -70,10 +73,27 @@ export const SudokuGame: React.FC<SudokuGameProps> = ({ externalLargeFont = fals
     setTimeElapsed(0);
     setIsPaused(false);
     setIsCompleted(false);
+    setShowSolutionModal(false);
 
     const diffKor = diff === 'easy' ? '쉬움' : diff === 'medium' ? '보통' : '어려움';
     soundManager.speak(`${diffKor} 난이도 스도쿠 퍼즐이 시작되었습니다.`);
   }, [difficulty]);
+
+  // Auto-solve the current puzzle using the verified unique solution
+  const handleAutoSolve = () => {
+    soundManager.playVictorySound();
+    const solvedBoard = board.map(row =>
+      row.map(cell => ({
+        ...cell,
+        value: cell.solution,
+        notes: [],
+        isError: false
+      }))
+    );
+    setBoard(solvedBoard);
+    setShowSolutionModal(false);
+    setIsCompleted(true);
+  };
 
   useEffect(() => {
     startNewGame(difficulty);
@@ -520,6 +540,15 @@ export const SudokuGame: React.FC<SudokuGameProps> = ({ externalLargeFont = fals
           </button>
 
           <button
+            onClick={() => setShowSolutionModal(true)}
+            className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-semibold flex items-center gap-1 border border-stone-700 transition-colors"
+            title="전체 정답 해답표 확인"
+          >
+            <Eye className="w-4 h-4 text-emerald-400" />
+            <span className="hidden sm:inline">정답표</span>
+          </button>
+
+          <button
             onClick={() => startNewGame(difficulty)}
             className="p-2 sm:px-3 sm:py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white text-xs font-semibold flex items-center gap-1 border border-stone-700 transition-colors"
             title="새 퍼즐 시작"
@@ -717,6 +746,86 @@ export const SudokuGame: React.FC<SudokuGameProps> = ({ externalLargeFont = fals
                 className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base rounded-xl shadow-lg transition-transform active:scale-95 cursor-pointer"
               >
                 다음 퍼즐 도전하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Solution Key Modal */}
+      {showSolutionModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-7 text-stone-900 shadow-2xl border-2 border-stone-200 text-center space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+              <div className="text-left">
+                <h3 className="text-lg sm:text-xl font-black text-stone-900 flex items-center gap-2">
+                  <CheckCheck className="w-5 h-5 text-emerald-600" />
+                  <span>스도쿠 정답표 (Solution Key)</span>
+                </h3>
+                <p className="text-xs text-stone-500 mt-0.5">
+                  가로·세로·3×3 구역에 1~9가 중복 없이 완벽히 배치된 유일 정답입니다.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowSolutionModal(false)}
+                className="p-1.5 hover:bg-stone-100 rounded-lg text-stone-400 hover:text-stone-700 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* 9x9 Solution Mini Board */}
+            <div className="bg-stone-900 p-2 rounded-xl shadow-inner mx-auto inline-block border-2 border-stone-900 select-none">
+              <div className="grid grid-cols-9 bg-stone-300 gap-[1px]">
+                {board.map((row, r) =>
+                  row.map((cell, c) => {
+                    const isRightBorder = c % 3 === 2 && c !== 8;
+                    const isBottomBorder = r % 3 === 2 && r !== 8;
+
+                    return (
+                      <div
+                        key={`sol-${r}-${c}`}
+                        className={`
+                          w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center font-mono text-sm sm:text-base font-bold
+                          ${cell.isGiven ? 'bg-white text-stone-950 font-black' : 'bg-emerald-50 text-emerald-700 font-extrabold'}
+                          ${isRightBorder ? 'border-r-2 border-r-stone-900' : ''}
+                          ${isBottomBorder ? 'border-b-2 border-b-stone-900' : ''}
+                        `}
+                      >
+                        {cell.solution}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-4 text-xs text-stone-600">
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 bg-white border border-stone-400 rounded-xs font-bold text-stone-950 inline-block text-[9px] leading-3 text-center">1</span>
+                <span>문제 힌트</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 bg-emerald-100 border border-emerald-400 rounded-xs font-bold text-emerald-800 inline-block text-[9px] leading-3 text-center">9</span>
+                <span>정답 해답</span>
+              </span>
+            </div>
+
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowSolutionModal(false)}
+                className="flex-1 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded-xl text-sm transition-colors cursor-pointer"
+              >
+                닫기
+              </button>
+              <button
+                type="button"
+                onClick={handleAutoSolve}
+                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-sm shadow-md transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Check className="w-4 h-4" />
+                <span>이 답으로 자동 채우기</span>
               </button>
             </div>
           </div>

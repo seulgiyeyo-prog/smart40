@@ -5,6 +5,7 @@ import { CognitiveQuizView } from './components/CognitiveQuizView';
 import { MemoryCardMatch } from './components/MemoryCardMatch';
 import { BrainCheckup } from './components/BrainCheckup';
 import { soundManager } from './utils/audio';
+import { updateTodayPerformance } from './utils/brainTrendData';
 import { Sparkles, Brain, Award, Heart, CheckCircle } from 'lucide-react';
 
 export default function App() {
@@ -44,11 +45,15 @@ export default function App() {
     soundManager.playCardSlap();
   };
 
-  const handleQuizDone = (_score: number, total: number) => {
+  const handleQuizDone = (score: number, total: number) => {
     setDailyStats(prev => ({
       ...prev,
       quizzesSolved: prev.quizzesSolved + total
     }));
+    if (total > 0) {
+      const accuracy = Math.round((score / total) * 100);
+      updateTodayPerformance({ quizAccuracy: accuracy });
+    }
   };
 
   return (
@@ -124,17 +129,26 @@ export default function App() {
 
       {/* Footer */}
       <footer className="mt-auto border-t border-stone-200 bg-white py-6 text-stone-500 text-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <div>
-            <p className="font-semibold text-stone-700">
-              브레인핏 40 · 40대 현대인을 위한 스마트 두뇌 트레이닝
-            </p>
-            <p className="text-[11px] text-stone-500 mt-0.5">
-              인지과학 및 신경가소성 원리를 기반으로 일상 속 두뇌 피로 회복과 전두엽 집중력 강화를 지원합니다.
-            </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+            <div>
+              <p className="font-semibold text-stone-700">
+                브레인핏 40 · 40대 현대인을 위한 스마트 두뇌 트레이닝
+              </p>
+              <p className="text-[11px] text-stone-500 mt-0.5">
+                인지과학 및 신경가소성 원리를 기반으로 일상 속 두뇌 피로 회복과 전두엽 집중력 강화를 지원합니다.
+              </p>
+            </div>
+            <div className="text-[11px] text-stone-500 flex items-center gap-3">
+              <span>뇌 피트니스 루틴: 매일 10분 스도쿠 논리 퍼즐 & 포커스 메모리</span>
+            </div>
           </div>
-          <div className="text-[11px] text-stone-500 flex items-center gap-3">
-            <span>뇌 피트니스 루틴: 매일 10분 스도쿠 논리 퍼즐 & 포커스 메모리</span>
+
+          {/* Centered Developer & Designer Credit in English */}
+          <div className="pt-3 border-t border-stone-100 flex flex-col items-center justify-center text-center">
+            <p className="text-xs sm:text-sm font-medium text-stone-600 tracking-tight">
+              Developed & Designed by <span className="font-bold text-stone-900">Seulgi Jeong</span>
+            </p>
           </div>
         </div>
       </footer>

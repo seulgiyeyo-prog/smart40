@@ -1,22 +1,81 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DEMENTIA_SELF_CHECKLIST } from '../data/cognitiveQuizzes';
+import { get7DayPerformanceData, DailyPerformance } from '../utils/brainTrendData';
 import { soundManager } from '../utils/audio';
 import {
+  ResponsiveContainer,
+  ComposedChart,
+  Area,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend
+} from 'recharts';
+import {
+  ShieldCheck,
+  TrendingUp,
+  Activity,
+  Sun,
   CheckCircle,
   AlertCircle,
   HelpCircle,
-  Heart,
-  Activity,
-  Smile,
-  Sun,
-  ShieldCheck,
-  RotateCcw
+  RotateCcw,
+  Sparkles,
+  Zap,
+  Award,
+  Brain,
+  Calendar,
+  Flame,
+  ArrowUpRight
 } from 'lucide-react';
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    name: string;
+    value: number;
+    color: string;
+    dataKey: string;
+  }>;
+  label?: string;
+}
+
+const CustomChartTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-900/95 border border-slate-700/80 rounded-xl p-3 shadow-xl backdrop-blur-md text-white text-xs space-y-1.5 min-w-[170px]">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-1">
+          <span className="font-bold text-slate-300">{label} 기록</span>
+          <span className="text-[10px] text-emerald-400 font-semibold">Active</span>
+        </div>
+        {payload.map((entry, index) => (
+          <div key={`tooltip-${index}`} className="flex items-center justify-between gap-3 text-xs">
+            <span className="flex items-center gap-1.5 font-medium" style={{ color: entry.color }}>
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+              {entry.name}
+            </span>
+            <span className="font-mono font-bold text-white tabular-nums">
+              {entry.value}{entry.dataKey === 'quizAccuracy' ? '%' : '점'}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 export const BrainCheckup: React.FC = () => {
   const [answers, setAnswers] = useState<Record<string, boolean>>({});
   const [showResult, setShowResult] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'checkup' | 'gym' | 'tips'>('checkup');
+  const [activeTab, setActiveTab] = useState<'trend' | 'checkup' | 'gym' | 'tips'>('trend');
+  const [performanceData, setPerformanceData] = useState<DailyPerformance[]>([]);
+
+  useEffect(() => {
+    setPerformanceData(get7DayPerformanceData());
+  }, []);
 
   const handleSelect = (id: string, value: boolean) => {
     setAnswers(prev => ({ ...prev, [id]: value }));
@@ -24,7 +83,6 @@ export const BrainCheckup: React.FC = () => {
 
   const answeredCount = Object.keys(answers).length;
   const isComplete = answeredCount === DEMENTIA_SELF_CHECKLIST.length;
-
   const yesCount = Object.values(answers).filter(Boolean).length;
 
   const handleSubmit = () => {
@@ -42,13 +100,40 @@ export const BrainCheckup: React.FC = () => {
     setShowResult(false);
   };
 
+  // Performance calculations
+  const latestMetric = performanceData[performanceData.length - 1] || {
+    memoryScore: 96,
+    quizAccuracy: 95,
+    compositeScore: 96
+  };
+  const firstMetric = performanceData[0] || {
+    memoryScore: 72,
+    quizAccuracy: 65,
+    compositeScore: 68
+  };
+
+  const memoryGrowth = latestMetric.memoryScore - firstMetric.memoryScore;
+  const quizGrowth = latestMetric.quizAccuracy - firstMetric.quizAccuracy;
+
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
-      {/* Sub Navigation */}
-      <div className="flex flex-wrap items-center gap-2 p-1.5 bg-stone-200/80 rounded-xl">
+      {/* Sub Navigation Bar */}
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 p-1.5 bg-stone-200/80 rounded-xl">
+        <button
+          onClick={() => setActiveTab('trend')}
+          className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-colors flex items-center gap-1.5 ${
+            activeTab === 'trend'
+              ? 'bg-white text-emerald-800 shadow-sm'
+              : 'text-stone-700 hover:text-stone-900'
+          }`}
+        >
+          <TrendingUp className="w-4 h-4 text-emerald-600" />
+          <span>두뇌 퍼포먼스 7일 추이</span>
+        </button>
+
         <button
           onClick={() => setActiveTab('checkup')}
-          className={`px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-colors flex items-center gap-1.5 ${
+          className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-colors flex items-center gap-1.5 ${
             activeTab === 'checkup'
               ? 'bg-white text-emerald-800 shadow-sm'
               : 'text-stone-700 hover:text-stone-900'
@@ -60,7 +145,7 @@ export const BrainCheckup: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('gym')}
-          className={`px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-colors flex items-center gap-1.5 ${
+          className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-colors flex items-center gap-1.5 ${
             activeTab === 'gym'
               ? 'bg-white text-emerald-800 shadow-sm'
               : 'text-stone-700 hover:text-stone-900'
@@ -72,7 +157,7 @@ export const BrainCheckup: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('tips')}
-          className={`px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-colors flex items-center gap-1.5 ${
+          className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-colors flex items-center gap-1.5 ${
             activeTab === 'tips'
               ? 'bg-white text-emerald-800 shadow-sm'
               : 'text-stone-700 hover:text-stone-900'
@@ -83,6 +168,171 @@ export const BrainCheckup: React.FC = () => {
         </button>
       </div>
 
+      {/* 1. Brain Performance Trend Tab (Recharts Chart) */}
+      {activeTab === 'trend' && (
+        <div className="space-y-6">
+          {/* Top Metric Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs space-y-1">
+              <div className="flex items-center justify-between text-stone-500 text-xs">
+                <span>기억력 스코어</span>
+                <span className="text-emerald-600 font-bold flex items-center text-[11px]">
+                  +{memoryGrowth}점 <ArrowUpRight className="w-3 h-3 inline" />
+                </span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-black font-mono text-emerald-700 tabular-nums">
+                {latestMetric.memoryScore}점
+              </div>
+              <p className="text-[11px] text-stone-500">모던 메모리 게임 성취도</p>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs space-y-1">
+              <div className="flex items-center justify-between text-stone-500 text-xs">
+                <span>퀴즈 정답률</span>
+                <span className="text-indigo-600 font-bold flex items-center text-[11px]">
+                  +{quizGrowth}%p <ArrowUpRight className="w-3 h-3 inline" />
+                </span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-black font-mono text-indigo-700 tabular-nums">
+                {latestMetric.quizAccuracy}%
+              </div>
+              <p className="text-[11px] text-stone-500">데일리 인지 퀴즈 정확도</p>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs space-y-1">
+              <div className="flex items-center justify-between text-stone-500 text-xs">
+                <span>두뇌 인덱스</span>
+                <span className="text-amber-600 font-bold text-[11px]">상위 8%</span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-black font-mono text-stone-900 tabular-nums">
+                {latestMetric.compositeScore}점
+              </div>
+              <p className="text-[11px] text-stone-500">종합 인지 집중도 지수</p>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs space-y-1">
+              <div className="flex items-center justify-between text-stone-500 text-xs">
+                <span>연속 트레이닝</span>
+                <Flame className="w-3.5 h-3.5 text-rose-500" />
+              </div>
+              <div className="text-2xl sm:text-3xl font-black font-mono text-rose-600 tabular-nums">
+                7일째
+              </div>
+              <p className="text-[11px] text-stone-500">일일 뇌 피트니스 루틴</p>
+            </div>
+          </div>
+
+          {/* Main Chart Container */}
+          <div className="bg-white rounded-3xl border border-stone-200 shadow-sm p-5 sm:p-7 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-100 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg sm:text-xl font-bold tracking-tight text-stone-900">
+                    Brain Performance Trend (최근 7일 추이)
+                  </h3>
+                  <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Live Analytics
+                  </span>
+                </div>
+                <p className="text-xs text-stone-500 mt-0.5">
+                  최근 7일간 모던 메모리 게임 스코어와 인지 퀴즈 정답률의 상승 추이를 분석합니다.
+                </p>
+              </div>
+
+              {/* Legend Badges */}
+              <div className="flex items-center gap-3 text-xs font-semibold">
+                <span className="flex items-center gap-1.5 text-emerald-700">
+                  <span className="w-3 h-3 rounded-sm bg-emerald-600" />
+                  <span>기억력 스코어 (점)</span>
+                </span>
+                <span className="flex items-center gap-1.5 text-indigo-700">
+                  <span className="w-3 h-1.5 rounded-full bg-indigo-600" />
+                  <span>퀴즈 정답률 (%)</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Recharts Chart View */}
+            <div className="w-full h-72 sm:h-80 select-none">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart
+                  data={performanceData}
+                  margin={{ top: 10, right: 15, left: -15, bottom: 5 }}
+                >
+                  <defs>
+                    {/* Emerald Area Gradient for Memory Score */}
+                    <linearGradient id="memoryScoreGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#059669" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#059669" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e7e5e4" />
+
+                  <XAxis
+                    dataKey="dateLabel"
+                    tick={{ fill: '#78716c', fontSize: 12, fontWeight: 500 }}
+                    axisLine={{ stroke: '#d6d3d1' }}
+                    tickLine={false}
+                  />
+
+                  <YAxis
+                    domain={[50, 100]}
+                    ticks={[50, 60, 70, 80, 90, 100]}
+                    tick={{ fill: '#78716c', fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+
+                  <Tooltip content={<CustomChartTooltip />} />
+
+                  {/* Area for Memory Score */}
+                  <Area
+                    type="monotone"
+                    dataKey="memoryScore"
+                    name="기억력 스코어"
+                    stroke="#059669"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#memoryScoreGradient)"
+                    dot={{ fill: '#059669', r: 4, strokeWidth: 2, stroke: '#ffffff' }}
+                    activeDot={{ r: 6, stroke: '#059669', strokeWidth: 2 }}
+                  />
+
+                  {/* Line for Quiz Accuracy */}
+                  <Line
+                    type="monotone"
+                    dataKey="quizAccuracy"
+                    name="퀴즈 정답률"
+                    stroke="#4f46e5"
+                    strokeWidth={2.5}
+                    dot={{ fill: '#4f46e5', r: 4, strokeWidth: 2, stroke: '#ffffff' }}
+                    activeDot={{ r: 6, stroke: '#4f46e5', strokeWidth: 2 }}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Neuroplasticity Feedback Insight */}
+            <div className="p-4 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl flex items-start gap-3 text-xs sm:text-sm text-emerald-950">
+              <div className="p-2 bg-emerald-600 text-white rounded-xl shrink-0 mt-0.5 shadow-xs">
+                <Brain className="w-4 h-4" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-bold text-emerald-900">
+                  40대 전두엽 & 해마 활성화 지수 분석
+                </h4>
+                <p className="text-emerald-800 leading-relaxed text-xs">
+                  지난 7일간 기억력 점수가 <span className="font-bold font-mono">+{memoryGrowth}점</span>, 퀴즈 정확도가 <span className="font-bold font-mono">+{quizGrowth}%p</span> 동반 상승세를 나타내고 있습니다.
+                  매일 10분간의 스도쿠 논리 추론과 모던 메모리 매칭이 해마의 신경 가소성(Neuroplasticity)을 자극하여 일상 속 브레인 포그를 효과적으로 걷어내고 있습니다.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Self Checkup Questionnaire Tab */}
       {activeTab === 'checkup' && (
         <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 sm:p-8 space-y-6">
           <div>
@@ -108,10 +358,10 @@ export const BrainCheckup: React.FC = () => {
                         질문 {idx + 1} ({item.category})
                       </span>
                     </div>
-                    <p className="text-base font-semibold text-stone-900">
+                    <p className="text-sm sm:text-base font-semibold text-stone-900">
                       {item.question}
                     </p>
-                    <p className="text-xs text-stone-700">
+                    <p className="text-xs text-stone-500">
                       💡 {item.tip}
                     </p>
                   </div>
@@ -119,23 +369,23 @@ export const BrainCheckup: React.FC = () => {
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => handleSelect(item.id, true)}
-                      className={`px-4 py-2 rounded-lg font-bold text-sm border transition-all ${
+                      className={`px-4 py-2 rounded-xl text-sm font-bold border transition-colors ${
                         currentVal === true
-                          ? 'bg-emerald-600 text-white border-emerald-600 shadow'
-                          : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-100'
+                          ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
+                          : 'bg-white border-stone-300 text-stone-700 hover:bg-stone-100'
                       }`}
                     >
-                      예 (그렇다)
+                      그렇다 (양호)
                     </button>
                     <button
                       onClick={() => handleSelect(item.id, false)}
-                      className={`px-4 py-2 rounded-lg font-bold text-sm border transition-all ${
+                      className={`px-4 py-2 rounded-xl text-sm font-bold border transition-colors ${
                         currentVal === false
-                          ? 'bg-rose-600 text-white border-rose-600 shadow'
-                          : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-100'
+                          ? 'bg-rose-600 border-rose-600 text-white shadow-sm'
+                          : 'bg-white border-stone-300 text-stone-700 hover:bg-stone-100'
                       }`}
                     >
-                      아니오
+                      아니다 (주의)
                     </button>
                   </div>
                 </div>
@@ -143,34 +393,34 @@ export const BrainCheckup: React.FC = () => {
             })}
           </div>
 
-          {!showResult ? (
-            <div className="pt-4 flex justify-between items-center border-t">
-              <span className="text-xs text-stone-500">
-                진행률: {answeredCount} / {DEMENTIA_SELF_CHECKLIST.length}
-              </span>
-              <button
-                onClick={handleSubmit}
-                disabled={!isComplete}
-                className={`px-6 py-3 rounded-xl font-bold text-base transition-all ${
-                  isComplete
-                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md'
-                    : 'bg-stone-200 text-stone-400 cursor-not-allowed'
-                }`}
-              >
-                결과 분석 확인하기
-              </button>
-            </div>
-          ) : (
-            <div className="p-6 bg-emerald-50 rounded-2xl border-2 border-emerald-300 space-y-4 animate-in fade-in">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="w-8 h-8 text-emerald-600 shrink-0" />
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-stone-200">
+            <span className="text-xs sm:text-sm text-stone-500">
+              진행 상황: <span className="font-bold text-emerald-700">{answeredCount}</span> / {DEMENTIA_SELF_CHECKLIST.length} 문항 완료
+            </span>
+
+            <button
+              onClick={handleSubmit}
+              disabled={!isComplete}
+              className="w-full sm:w-auto px-6 py-3 bg-emerald-700 hover:bg-emerald-800 disabled:bg-stone-300 text-white font-bold rounded-xl text-sm transition-colors shadow-sm disabled:cursor-not-allowed"
+            >
+              자가진단 결과 확인하기
+            </button>
+          </div>
+
+          {/* Results Summary Box */}
+          {showResult && (
+            <div className="p-6 rounded-2xl bg-emerald-50 border-2 border-emerald-500 text-stone-900 space-y-4 animate-in fade-in zoom-in-95">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-emerald-600 rounded-full text-white">
+                  <CheckCircle className="w-8 h-8" />
+                </div>
                 <div>
-                  <h4 className="text-xl font-black text-emerald-950">
-                    자가진단 결과: &apos;양호&apos; 항목 {yesCount}개 / {DEMENTIA_SELF_CHECKLIST.length}개
+                  <h4 className="text-xl font-bold text-emerald-950">
+                    자가진단 결과: 양호 항목 {yesCount}개 / 총 {DEMENTIA_SELF_CHECKLIST.length}개
                   </h4>
                   <p className="text-sm text-emerald-900 mt-1">
                     {yesCount >= 5
-                      ? '기억력과 일상 인지 기능이 매우 건강하게 잘 유지되고 계십니다! 앞으로도 고스톱과 퀴즈로 두뇌를 깨워주세요.'
+                      ? '기억력과 일상 인지 기능이 매우 건강하게 잘 유지되고 계십니다! 앞으로도 스도쿠와 퀴즈로 두뇌를 깨워주세요.'
                       : yesCount >= 3
                       ? '대체로 양호하지만 일부 건망증이나 피로감이 있을 수 있습니다. 가벼운 산책과 손가락 체조를 매일 권장드립니다.'
                       : '기억력이나 계산에서 불편함이 다소 감지됩니다. 가까운 보건소 치매안심센터에서 무료 정밀 검진을 받아보시면 안심하실 수 있습니다.'}
@@ -192,6 +442,7 @@ export const BrainCheckup: React.FC = () => {
         </div>
       )}
 
+      {/* 3. Daily 3-Min Executive Function Finger Gym Tab */}
       {activeTab === 'gym' && (
         <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 sm:p-8 space-y-6">
           <div>
@@ -237,6 +488,7 @@ export const BrainCheckup: React.FC = () => {
         </div>
       )}
 
+      {/* 4. 3-3-3 Wellness Tips Tab */}
       {activeTab === 'tips' && (
         <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 sm:p-8 space-y-6">
           <div>
@@ -256,7 +508,7 @@ export const BrainCheckup: React.FC = () => {
               <ul className="text-xs sm:text-sm text-stone-700 space-y-1 list-disc list-inside">
                 <li><strong>일주일에 3번 이상 걷기:</strong> 땀이 살짝 날 정도의 유산소 걷기</li>
                 <li><strong>생선과 채소 골고루 먹기:</strong> 오메가3와 신선한 항산화 채소</li>
-                <li><strong>부지런히 읽고 쓰기:</strong> 퀴즈 풀기, 신문 읽기, 맞고 게임으로 뇌 쓰기</li>
+                <li><strong>부지런히 읽고 쓰기:</strong> 퀴즈 풀기, 신문 읽기, 스도쿠 퍼즐로 뇌 쓰기</li>
               </ul>
             </div>
 

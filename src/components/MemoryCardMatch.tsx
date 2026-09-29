@@ -3,6 +3,7 @@ import confetti from 'canvas-confetti';
 import { MEMORY_CARD_ITEMS } from '../data/cognitiveQuizzes';
 import { MemoryPairCard } from '../types/quiz';
 import { soundManager } from '../utils/audio';
+import { updateTodayPerformance } from '../utils/brainTrendData';
 import {
   RotateCcw,
   Trophy,
@@ -175,6 +176,10 @@ export const MemoryCardMatch: React.FC = () => {
     setIsWon(true);
     soundManager.playVictorySound();
     confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+
+    // Update brain trend performance
+    const calculatedScore = Math.max(65, Math.min(100, Math.round(100 - (moves - config.pairs) * 2.5)));
+    updateTodayPerformance({ memoryScore: calculatedScore });
 
     // Save best time
     setBestTimes(prev => {
