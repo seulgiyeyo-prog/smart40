@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DEMENTIA_SELF_CHECKLIST } from '../data/cognitiveQuizzes';
-import { get7DayPerformanceData, DailyPerformance } from '../utils/brainTrendData';
+import { get7DayPerformanceData, DailyPerformance, getTrainingStreak } from '../utils/brainTrendData';
 import { soundManager } from '../utils/audio';
 import {
   ResponsiveContainer,
@@ -101,19 +101,19 @@ export const BrainCheckup: React.FC = () => {
   };
 
   // Performance calculations
-  const latestMetric = performanceData[performanceData.length - 1] || {
-    memoryScore: 96,
-    quizAccuracy: 95,
-    compositeScore: 96
-  };
-  const firstMetric = performanceData[0] || {
-    memoryScore: 72,
-    quizAccuracy: 65,
-    compositeScore: 68
-  };
+  const streak = getTrainingStreak();
 
-  const memoryGrowth = latestMetric.memoryScore - firstMetric.memoryScore;
-  const quizGrowth = latestMetric.quizAccuracy - firstMetric.quizAccuracy;
+  const validDays = performanceData.filter(d => d.memoryScore !== null && d.quizAccuracy !== null);
+  const isFirstDay = validDays.length <= 1;
+
+  const todayMetric = performanceData.find(d => d.isToday) || performanceData[performanceData.length - 1];
+  const memoryScoreVal = todayMetric?.memoryScore ?? 92;
+  const quizAccuracyVal = todayMetric?.quizAccuracy ?? 90;
+  const compositeScoreVal = todayMetric?.compositeScore ?? 91;
+
+  const firstValidMetric = validDays[0] || todayMetric;
+  const memoryGrowth = memoryScoreVal - (firstValidMetric?.memoryScore ?? memoryScoreVal);
+  const quizGrowth = quizAccuracyVal - (firstValidMetric?.quizAccuracy ?? quizAccuracyVal);
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
@@ -176,12 +176,18 @@ export const BrainCheckup: React.FC = () => {
             <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs space-y-1">
               <div className="flex items-center justify-between text-stone-500 text-xs">
                 <span>기억력 스코어</span>
-                <span className="text-emerald-600 font-bold flex items-center text-[11px]">
-                  +{memoryGrowth}점 <ArrowUpRight className="w-3 h-3 inline" />
-                </span>
+                {isFirstDay ? (
+                  <span className="text-emerald-700 font-bold text-[11px] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60">
+                    첫 달성 🎯
+                  </span>
+                ) : (
+                  <span className="text-emerald-600 font-bold flex items-center text-[11px]">
+                    {memoryGrowth >= 0 ? `+${memoryGrowth}점` : `${memoryGrowth}점`} <ArrowUpRight className="w-3 h-3 inline" />
+                  </span>
+                )}
               </div>
               <div className="text-2xl sm:text-3xl font-black font-mono text-emerald-700 tabular-nums">
-                {latestMetric.memoryScore}점
+                {memoryScoreVal}점
               </div>
               <p className="text-[11px] text-stone-500">모던 메모리 게임 성취도</p>
             </div>
@@ -189,12 +195,18 @@ export const BrainCheckup: React.FC = () => {
             <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs space-y-1">
               <div className="flex items-center justify-between text-stone-500 text-xs">
                 <span>퀴즈 정답률</span>
-                <span className="text-indigo-600 font-bold flex items-center text-[11px]">
-                  +{quizGrowth}%p <ArrowUpRight className="w-3 h-3 inline" />
-                </span>
+                {isFirstDay ? (
+                  <span className="text-indigo-700 font-bold text-[11px] bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200/60">
+                    첫 달성 🎯
+                  </span>
+                ) : (
+                  <span className="text-indigo-600 font-bold flex items-center text-[11px]">
+                    {quizGrowth >= 0 ? `+${quizGrowth}%p` : `${quizGrowth}%p`} <ArrowUpRight className="w-3 h-3 inline" />
+                  </span>
+                )}
               </div>
               <div className="text-2xl sm:text-3xl font-black font-mono text-indigo-700 tabular-nums">
-                {latestMetric.quizAccuracy}%
+                {quizAccuracyVal}%
               </div>
               <p className="text-[11px] text-stone-500">데일리 인지 퀴즈 정확도</p>
             </div>
@@ -205,7 +217,7 @@ export const BrainCheckup: React.FC = () => {
                 <span className="text-amber-600 font-bold text-[11px]">상위 8%</span>
               </div>
               <div className="text-2xl sm:text-3xl font-black font-mono text-stone-900 tabular-nums">
-                {latestMetric.compositeScore}점
+                {compositeScoreVal}점
               </div>
               <p className="text-[11px] text-stone-500">종합 인지 집중도 지수</p>
             </div>
@@ -216,9 +228,11 @@ export const BrainCheckup: React.FC = () => {
                 <Flame className="w-3.5 h-3.5 text-rose-500" />
               </div>
               <div className="text-2xl sm:text-3xl font-black font-mono text-rose-600 tabular-nums">
-                7일째
+                {streak}일 째
               </div>
-              <p className="text-[11px] text-stone-500">일일 뇌 피트니스 루틴</p>
+              <p className="text-[11px] text-stone-500">
+                {streak === 1 ? '첫 발걸음 달성! 🌱' : '일일 뇌 피트니스 루틴'}
+              </p>
             </div>
           </div>
 
@@ -251,6 +265,16 @@ export const BrainCheckup: React.FC = () => {
                 </span>
               </div>
             </div>
+
+            {/* 1st Day Helpful Indicator */}
+            {isFirstDay && (
+              <div className="p-3 bg-emerald-50/90 border border-emerald-200/90 rounded-2xl flex items-center gap-2.5 text-xs text-emerald-900 font-medium">
+                <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  <strong>1일 차 두뇌 트레이닝을 시작하셨습니다!</strong> 매일 1회 이상 트레이닝을 진행하시면 최대 7일간의 두뇌 향상 곡선이 실시간으로 누적됩니다.
+                </span>
+              </div>
+            )}
 
             {/* Recharts Chart View */}
             <div className="w-full h-72 sm:h-80 select-none">
@@ -293,6 +317,7 @@ export const BrainCheckup: React.FC = () => {
                     name="기억력 스코어"
                     stroke="#059669"
                     strokeWidth={2.5}
+                    connectNulls={true}
                     fillOpacity={1}
                     fill="url(#memoryScoreGradient)"
                     dot={{ fill: '#059669', r: 4, strokeWidth: 2, stroke: '#ffffff' }}
@@ -306,6 +331,7 @@ export const BrainCheckup: React.FC = () => {
                     name="퀴즈 정답률"
                     stroke="#4f46e5"
                     strokeWidth={2.5}
+                    connectNulls={true}
                     dot={{ fill: '#4f46e5', r: 4, strokeWidth: 2, stroke: '#ffffff' }}
                     activeDot={{ r: 6, stroke: '#4f46e5', strokeWidth: 2 }}
                   />
@@ -323,8 +349,15 @@ export const BrainCheckup: React.FC = () => {
                   40대 전두엽 & 해마 활성화 지수 분석
                 </h4>
                 <p className="text-emerald-800 leading-relaxed text-xs">
-                  지난 7일간 기억력 점수가 <span className="font-bold font-mono">+{memoryGrowth}점</span>, 퀴즈 정확도가 <span className="font-bold font-mono">+{quizGrowth}%p</span> 동반 상승세를 나타내고 있습니다.
-                  매일 10분간의 스도쿠 논리 추론과 모던 메모리 매칭이 해마의 신경 가소성(Neuroplasticity)을 자극하여 일상 속 브레인 포그를 효과적으로 걷어내고 있습니다.
+                  {isFirstDay ? (
+                    <>
+                      🎉 <span className="font-bold">첫 번째 두뇌 피트니스를 성공적으로 완료하셨습니다!</span> 오늘 달성한 기억력 점수 <span className="font-bold font-mono">{memoryScoreVal}점</span>, 퀴즈 정확도 <span className="font-bold font-mono">{quizAccuracyVal}%</span>를 바탕으로 매일 10분간의 스도쿠 논리 추론과 모던 메모리 매칭을 이어가시면 해마의 신경 가소성(Neuroplasticity)을 자극하여 일상 속 브레인 포그를 효과적으로 걷어낼 수 있습니다.
+                    </>
+                  ) : (
+                    <>
+                      지난 <span className="font-bold font-mono">{streak}일간</span> 기억력 점수가 <span className="font-bold font-mono">{memoryGrowth >= 0 ? `+${memoryGrowth}점` : `${memoryGrowth}점`}</span>, 퀴즈 정확도가 <span className="font-bold font-mono">{quizGrowth >= 0 ? `+${quizGrowth}%p` : `${quizGrowth}%p`}</span> 변화를 나타내고 있습니다. 매일 10분간의 스도쿠 논리 추론과 모던 메모리 매칭이 해마의 신경 가소성을 자극하여 일상 속 브레인 포그를 효과적으로 걷어내고 있습니다.
+                    </>
+                  )}
                 </p>
               </div>
             </div>
