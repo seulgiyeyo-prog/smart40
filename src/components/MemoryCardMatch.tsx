@@ -388,7 +388,7 @@ export const MemoryCardMatch: React.FC = () => {
             <h3 className="text-2xl sm:text-3xl font-extrabold text-white">
               PERFECT FOCUS!
             </h3>
-            <p className="text-sm text-slate-300 max-w-md mx-auto">
+            <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mx-auto break-keep sm:whitespace-nowrap">
               {config.label} 난이도({config.totalCards}장)를 총 <span className="text-emerald-400 font-bold font-mono">{moves}회</span> 만에, 소요 시간 <span className="text-amber-300 font-bold font-mono">{formatTimer(timeElapsed)}</span>으로 모두 매칭했습니다!
             </p>
           </div>
