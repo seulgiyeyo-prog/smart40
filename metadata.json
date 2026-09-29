@@ -1,0 +1,6 @@
+{
+  "name": "브레인핏 40 - 스마트 두뇌 트레이닝 & 고스톱",
+  "description": "40대 현대인을 위한 집중력·기억력·계산력 강화 스마트 브레인 피트니스. 3인 고스톱 & 2인 맞고 두뇌 게임과 모던 메모리 트레이닝, 인지 퀴즈 지원.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
