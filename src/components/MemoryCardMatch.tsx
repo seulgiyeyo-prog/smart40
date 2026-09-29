@@ -4,6 +4,7 @@ import { MEMORY_CARD_ITEMS } from '../data/cognitiveQuizzes';
 import { MemoryPairCard } from '../types/quiz';
 import { soundManager } from '../utils/audio';
 import { updateTodayPerformance } from '../utils/brainTrendData';
+import { getUserName } from '../utils/userProfile';
 import {
   RotateCcw,
   Trophy,
@@ -194,7 +195,8 @@ export const MemoryCardMatch: React.FC = () => {
       return next;
     });
 
-    soundManager.speak(`축하합니다! ${formatTimer(timeElapsed)} 만에 모든 짝을 맞추셨습니다.`);
+    const currentUserName = getUserName();
+    soundManager.speak(`축하합니다${currentUserName ? `, ${currentUserName}님` : ''}! ${formatTimer(timeElapsed)} 만에 모든 짝을 맞추셨습니다.`);
   };
 
   const formatTimer = (seconds: number) => {

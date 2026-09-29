@@ -67,7 +67,11 @@ const CustomChartTooltip: React.FC<CustomTooltipProps> = ({ active, payload, lab
   return null;
 };
 
-export const BrainCheckup: React.FC = () => {
+interface BrainCheckupProps {
+  userName?: string;
+}
+
+export const BrainCheckup: React.FC<BrainCheckupProps> = ({ userName }) => {
   const [answers, setAnswers] = useState<Record<string, boolean>>({});
   const [showResult, setShowResult] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'trend' | 'checkup' | 'gym' | 'tips'>('trend');
@@ -242,7 +246,7 @@ export const BrainCheckup: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg sm:text-xl font-bold tracking-tight text-stone-900">
-                    Brain Performance Trend (최근 7일 추이)
+                    {userName ? `${userName} 님의 두뇌 퍼포먼스 (최근 7일)` : 'Brain Performance Trend (최근 7일 추이)'}
                   </h3>
                   <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                     Live Analytics

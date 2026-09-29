@@ -8,6 +8,7 @@ import {
   formatTime
 } from '../utils/sudokuGenerator';
 import { soundManager } from '../utils/audio';
+import { getUserName } from '../utils/userProfile';
 import {
   Play,
   Pause,
@@ -361,7 +362,8 @@ export const SudokuGame: React.FC<SudokuGameProps> = ({ externalLargeFont = fals
       return next;
     });
 
-    soundManager.speak(`축하합니다! ${formatTime(timeElapsed)} 만에 스도쿠 퍼즐을 완성했습니다.`);
+    const currentUserName = getUserName();
+    soundManager.speak(`축하합니다${currentUserName ? `, ${currentUserName}님` : ''}! ${formatTime(timeElapsed)} 만에 스도쿠 퍼즐을 완성했습니다.`);
   };
 
   // Keyboard navigation & number input

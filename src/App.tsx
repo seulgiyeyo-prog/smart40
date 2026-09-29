@@ -6,12 +6,18 @@ import { MemoryCardMatch } from './components/MemoryCardMatch';
 import { BrainCheckup } from './components/BrainCheckup';
 import { soundManager } from './utils/audio';
 import { updateTodayPerformance } from './utils/brainTrendData';
-import { Sparkles, Brain, Award, Heart, CheckCircle } from 'lucide-react';
+import { getUserName, saveUserName } from './utils/userProfile';
+import { NameSetupModal } from './components/NameSetupModal';
+import { Sparkles, Brain, Award, Heart, CheckCircle, UserCheck } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('sudoku');
   const [isLargeFont, setIsLargeFont] = useState<boolean>(false);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+
+  // User Profile
+  const [userName, setUserName] = useState<string>(() => getUserName());
+  const [isNameModalOpen, setIsNameModalOpen] = useState<boolean>(() => !getUserName());
 
   // Daily cognitive stats in localStorage
   const [dailyStats, setDailyStats] = useState<{
@@ -45,6 +51,12 @@ export default function App() {
     soundManager.playCardSlap();
   };
 
+  const handleSaveName = (name: string) => {
+    saveUserName(name);
+    setUserName(name);
+    setIsNameModalOpen(false);
+  };
+
   const handleQuizDone = (score: number, total: number) => {
     setDailyStats(prev => ({
       ...prev,
@@ -66,6 +78,17 @@ export default function App() {
         setIsLargeFont={setIsLargeFont}
         soundEnabled={soundEnabled}
         setSoundEnabled={setSoundEnabled}
+        userName={userName}
+        onOpenNameModal={() => setIsNameModalOpen(true)}
+      />
+
+      {/* Name Setup / Edit Modal */}
+      <NameSetupModal
+        isOpen={isNameModalOpen}
+        currentName={userName}
+        onSave={handleSaveName}
+        onClose={() => setIsNameModalOpen(false)}
+        isInitial={!userName}
       />
 
       {/* Main Content Area */}
@@ -83,7 +106,13 @@ export default function App() {
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
-              매일 10분 즐거운 두뇌 트레이닝, 스마트한 뇌 활력을 깨워요
+              {userName ? (
+                <>
+                  <span className="text-amber-300">{userName}</span> 님, 오늘 두뇌 활력을 깨워볼까요?
+                </>
+              ) : (
+                '매일 10분 즐거운 두뇌 트레이닝, 스마트한 뇌 활력을 깨워요'
+              )}
             </h1>
 
             <p className="text-sm sm:text-base text-emerald-100 max-w-2xl leading-relaxed">
@@ -93,10 +122,10 @@ export default function App() {
 
           {/* Quick Daily Mission Progress Card */}
           <div className="bg-black/25 rounded-xl p-4 border border-white/20 backdrop-blur-xs min-w-[240px] text-center space-y-2.5 shrink-0">
-            <span className="text-xs font-bold text-amber-300 flex items-center justify-center gap-1">
+            <div className="flex items-center justify-center gap-1 text-xs font-bold text-amber-300">
               <Award className="w-4 h-4" />
-              <span>오늘 나의 두뇌 활력 활동</span>
-            </span>
+              <span>{userName ? `${userName} 님의 오늘 두뇌 활동` : '오늘 나의 두뇌 활력 활동'}</span>
+            </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="bg-white/10 p-2 rounded-lg">
                 <span className="text-stone-300 block">스도쿠 트레이닝</span>
@@ -123,7 +152,7 @@ export default function App() {
           {activeTab === 'sudoku' && <SudokuGame externalLargeFont={isLargeFont} />}
           {activeTab === 'memory' && <MemoryCardMatch />}
           {activeTab === 'quiz' && <CognitiveQuizView onQuizComplete={handleQuizDone} />}
-          {activeTab === 'checkup' && <BrainCheckup />}
+          {activeTab === 'checkup' && <BrainCheckup userName={userName} />}
         </section>
       </main>
 
